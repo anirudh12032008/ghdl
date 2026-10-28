@@ -5271,9 +5271,10 @@ package body Verilog.Parse is
             Skip_Until_Semicolon;
             Stmt := Null_Node;
       end case;
+      --  Attributes are not attached to statements.  Full_case and
+      --  parallel_case are handled by Parse_Case_Statement.
       if Stmt /= Null_Node then
          Set_Parent (Stmt, Parent);
-         Apply_Attributes (Attrs, Stmt);
       end if;
       return Stmt;
    end Parse_Statement;
