@@ -226,6 +226,10 @@ package body Grt.Vpi is
             Trace ("vpiStructNet");
          when vpiMember =>
             Trace ("vpiMember");
+         when vpiLowConn =>
+            Trace ("vpiLowConn");
+         when vpiHighConn =>
+            Trace ("vpiHighConn");
          when vpiPort =>
             Trace ("vpiPort");
          when vpiDirection =>
@@ -1043,6 +1047,47 @@ package body Grt.Vpi is
    -- vpiHandle  vpi_handle(int type, vpiHandle ref)
    -- Obtain a handle to an object with a one-to-one relationship.
    -- see IEEE 1364-2001, chapter 27.16, page 682
+   --  Return the net in the instantiating region that is the actual of
+   --  the port PORT, or null.  This only works when the association is
+   --  collapsed: the port and the actual then share their signals.
+   function Get_High_Conn (Port : VhpiHandleT) return vpiHandle
+   is
+      Pinfo, Info : Verilog_Wire_Info;
+      Iter, Obj : VhpiHandleT;
+      Error : AvhpiErrorT;
+   begin
+      Get_Verilog_Wire (Port, Pinfo);
+      if Pinfo.Vtype = Vcd_Bad then
+         return null;
+      end if;
+      Avhpi_Parent_Decls (Port, Iter, Error);
+      if Error /= AvhpiErrorOk then
+         return null;
+      end if;
+      loop
+         Vhpi_Scan (Iter, Obj, Error);
+         exit when Error /= AvhpiErrorOk;
+         case Vhpi_Get_Kind (Obj) is
+            when VhpiPortDeclK
+              | VhpiSigDeclK =>
+               Get_Verilog_Wire (Obj, Info);
+               --  Compare the first signal and the shape.
+               if Info.Vtype = Pinfo.Vtype
+                 and then Info.Ptr /= Null_Address
+                 and then To_Signal_Arr_Ptr (Info.Ptr)(0)
+                   = To_Signal_Arr_Ptr (Pinfo.Ptr)(0)
+                 and then Get_Wire_Length (Info) = Get_Wire_Length (Pinfo)
+               then
+                  return Build_vpiHandle
+                    (Obj, Vhpi_Handle_To_Vpi_Net (Obj));
+               end if;
+            when others =>
+               null;
+         end case;
+      end loop;
+      return null;
+   end Get_High_Conn;
+
    function Vpi_Handle_Internal
      (aType : Integer; Ref : vpiHandle) return vpiHandle
    is
@@ -1074,6 +1119,19 @@ package body Grt.Vpi is
                when others =>
                   return null;
             end case;
+         when vpiLowConn =>
+            if Ref.mType = vpiPort then
+               return Build_vpiHandle
+                 (Ref.Ref, Vhpi_Handle_To_Vpi_Net (Ref.Ref));
+            else
+               return null;
+            end if;
+         when vpiHighConn =>
+            if Ref.mType = vpiPort then
+               return Get_High_Conn (Ref.Ref);
+            else
+               return null;
+            end if;
          when others =>
             return null;
       end case;

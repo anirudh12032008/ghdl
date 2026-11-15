@@ -921,6 +921,12 @@ package Grt.Avhpi is
                         Res : out VhpiHandleT;
                         Error : out AvhpiErrorT);
 
+   --  Get an iterator on the declarations of the region that instantiates
+   --  the region of REF.  Error is set if there is none (top-level).
+   procedure Avhpi_Parent_Decls (Ref : VhpiHandleT;
+                                 Res : out VhpiHandleT;
+                                 Error : out AvhpiErrorT);
+
    procedure Vhpi_Get_Str (Property : VhpiStrPropertyT;
                            Obj : VhpiHandleT;
                            Res : out String;

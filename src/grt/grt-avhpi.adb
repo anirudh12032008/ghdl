@@ -796,6 +796,38 @@ package body Grt.Avhpi is
       end case;
    end Vhpi_Scan;
 
+   procedure Avhpi_Parent_Decls (Ref : VhpiHandleT;
+                                 Res : out VhpiHandleT;
+                                 Error : out AvhpiErrorT)
+   is
+      Ctxt : Rti_Context;
+      Link : Ghdl_Entity_Link_Acc;
+      Stmt : Ghdl_Rti_Access;
+      Parent : VhpiHandleT;
+   begin
+      Res := Null_Handle;
+      Error := AvhpiErrorHandle;
+      Ctxt := Ref.Ctxt;
+      if Ctxt.Block = null
+        or else Ctxt.Block.Kind /= Ghdl_Rtik_Architecture
+      then
+         return;
+      end if;
+      Link := To_Ghdl_Entity_Link_Acc (Get_Parent_Context (Ctxt).Base);
+      Get_Instance_Link (Link, Ctxt, Stmt);
+      if Stmt = null then
+         return;
+      end if;
+      --  The parent is an architecture, a block or a generate body.
+      --  Only an architecture also has the ports of its entity.
+      if Ctxt.Block.Kind = Ghdl_Rtik_Architecture then
+         Parent := (Kind => VhpiRootInstK, Ctxt => Ctxt);
+      else
+         Parent := (Kind => VhpiBlockStmtK, Ctxt => Ctxt);
+      end if;
+      Vhpi_Iterator (VhpiDecls, Parent, Res, Error);
+   end Avhpi_Parent_Decls;
+
    function Avhpi_Get_Base_Name (Obj : VhpiHandleT) return Ghdl_C_String
    is
    begin
